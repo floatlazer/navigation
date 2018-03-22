@@ -123,7 +123,7 @@ public:
   /**
    * Whether this generator can create more trajectories
    */
-  bool nextTrajectory(Trajectory &traj);
+  bool nextTrajectory(Trajectory &traj, unsigned int index);
 
 
   static Eigen::Vector3f computeNewPositions(const Eigen::Vector3f& pos,
@@ -138,9 +138,11 @@ public:
         Eigen::Vector3f sample_target_vel,
         base_local_planner::Trajectory& traj);
 
+unsigned int getSampleSize();
+
 protected:
 
-  unsigned int next_sample_index_;
+  //unsigned int next_sample_index_;
   // to store sample params of each sample between init and generation
   std::vector<Eigen::Vector3f> sample_params_;
   base_local_planner::LocalPlannerLimits* limits_;

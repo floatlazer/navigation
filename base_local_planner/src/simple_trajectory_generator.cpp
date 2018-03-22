@@ -74,7 +74,6 @@ void SimpleTrajectoryGenerator::initialise(
   pos_ = pos;
   vel_ = vel;
   limits_ = limits;
-  next_sample_index_ = 0;
   sample_params_.clear();
 
   double min_vel_x = limits->min_vel_x;
@@ -152,15 +151,16 @@ void SimpleTrajectoryGenerator::setParameters(
  * Whether this generator can create more trajectories
  */
 bool SimpleTrajectoryGenerator::hasMoreTrajectories() {
-  return next_sample_index_ < sample_params_.size();
+  //return next_sample_index_ < sample_params_.size();
+  return true;
 }
 
 /**
  * Create and return the next sample trajectory
  */
-bool SimpleTrajectoryGenerator::nextTrajectory(Trajectory &comp_traj) {
+bool SimpleTrajectoryGenerator::nextTrajectory(Trajectory &comp_traj, unsigned int next_sample_index_) {
   bool result = false;
-  if (hasMoreTrajectories()) {
+  if (next_sample_index_ < sample_params_.size()) {
     if (generateTrajectory(
         pos_,
         vel_,
@@ -169,8 +169,13 @@ bool SimpleTrajectoryGenerator::nextTrajectory(Trajectory &comp_traj) {
       result = true;
     }
   }
-  next_sample_index_++;
+  //next_sample_index_++;
   return result;
+}
+
+unsigned int SimpleTrajectoryGenerator::getSampleSize()
+{
+    return sample_params_.size();
 }
 
 /**

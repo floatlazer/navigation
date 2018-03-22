@@ -54,10 +54,11 @@ public:
    */
   virtual bool hasMoreTrajectories() = 0;
 
+  virtual unsigned int getSampleSize() = 0;
   /**
    * Whether this generator can create more trajectories
    */
-  virtual bool nextTrajectory(Trajectory &traj) = 0;
+  virtual bool nextTrajectory(Trajectory &traj, unsigned int index) = 0;
 
   /**
    * @brief  Virtual destructor for the interface

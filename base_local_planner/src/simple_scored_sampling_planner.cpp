@@ -38,9 +38,10 @@
 #include <base_local_planner/simple_scored_sampling_planner.h>
 
 #include <ros/console.h>
+#include <omp.h>
 
 namespace base_local_planner {
-  
+
   SimpleScoredSamplingPlanner::SimpleScoredSamplingPlanner(std::vector<TrajectorySampleGenerator*> gen_list, std::vector<TrajectoryCostFunction*>& critics, int max_samples) {
     max_samples_ = max_samples;
     gen_list_ = gen_list;
@@ -79,10 +80,8 @@ namespace base_local_planner {
   }
 
   bool SimpleScoredSamplingPlanner::findBestTrajectory(Trajectory& traj, std::vector<Trajectory>* all_explored) {
-    Trajectory loop_traj;
     Trajectory best_traj;
-    double loop_traj_cost, best_traj_cost = -1;
-    bool gen_success;
+    double best_traj_cost = -1.0;
     int count, count_valid;
     for (std::vector<TrajectoryCostFunction*>::iterator loop_critic = critics_.begin(); loop_critic != critics_.end(); ++loop_critic) {
       TrajectoryCostFunction* loop_critic_p = *loop_critic;
@@ -96,29 +95,45 @@ namespace base_local_planner {
       count = 0;
       count_valid = 0;
       TrajectorySampleGenerator* gen_ = *loop_gen;
-      while (gen_->hasMoreTrajectories()) {
-        gen_success = gen_->nextTrajectory(loop_traj);
-        if (gen_success == false) {
+
+      # pragma omp parallel for
+      for(unsigned int sample_index = 0; sample_index < gen_->getSampleSize(); sample_index++)
+      {
+        ROS_INFO("Thread rank: %d / %d", omp_get_thread_num(), omp_get_num_threads());
+        Trajectory loop_traj;
+        bool gen_success;
+        double loop_traj_cost;
+
+        gen_success = gen_->nextTrajectory(loop_traj, sample_index);
+        if (gen_success == false)
+        {
           // TODO use this for debugging
           continue;
         }
-        loop_traj_cost = scoreTrajectory(loop_traj, best_traj_cost);
+
+        unsigned int best_traj_cost_loc;
+        # pragma omp atomic read
+        best_traj_cost_loc = best_traj_cost;
+
+        loop_traj_cost = scoreTrajectory(loop_traj, best_traj_cost_loc);
         if (all_explored != NULL) {
           loop_traj.cost_ = loop_traj_cost;
+          # pragma omp critical
           all_explored->push_back(loop_traj);
         }
 
         if (loop_traj_cost >= 0) {
           count_valid++;
+          # pragma omp critical
           if (best_traj_cost < 0 || loop_traj_cost < best_traj_cost) {
             best_traj_cost = loop_traj_cost;
             best_traj = loop_traj;
           }
         }
         count++;
-        if (max_samples_ > 0 && count >= max_samples_) {
-          break;
-        }        
+        //if (max_samples_ > 0 && count >= max_samples_) {
+        //  break;
+        //}
       }
       if (best_traj_cost >= 0) {
         traj.xv_ = best_traj.xv_;
@@ -141,5 +156,5 @@ namespace base_local_planner {
     return best_traj_cost >= 0;
   }
 
-  
+
 }// namespace
